@@ -1,25 +1,30 @@
 package com.app.demo.domain.service;
 
-import com.app.demo.domain.dto.PlanEmpresaDTO;
-import com.app.demo.domain.mapper.PlanEmpresaMapper;
-import com.app.demo.persistence.entity.PlanEmpresa;
-import com.app.demo.persistence.entity.Empresa;
-import com.app.demo.persistence.repository.PlanEmpresaRepository;
-import com.app.demo.persistence.repository.EmpresaRepository;
-import com.app.demo.domain.response.PlanEmpresaResponse;
-import com.app.demo.persistence.entity.Imagen;
-import com.app.demo.persistence.entity.ValoracionPlan;
-import com.app.demo.persistence.repository.ImagenRepository;
-import com.app.demo.persistence.repository.ValoracionPlanRepository;
-import jakarta.transaction.Transactional;
 import java.io.IOException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.app.demo.domain.dto.PlanEmpresaDTO;
+import com.app.demo.domain.dto.ValoracionPlanDTO;
+import com.app.demo.domain.mapper.PlanEmpresaMapper;
+import com.app.demo.domain.mapper.ValoracionPlanMapper;
+import com.app.demo.domain.response.PlanEmpresaResponse;
+import com.app.demo.domain.response.ValoracionPlanResponse;
+import com.app.demo.persistence.entity.Empresa;
+import com.app.demo.persistence.entity.Imagen;
+import com.app.demo.persistence.entity.PlanEmpresa;
+import com.app.demo.persistence.entity.ValoracionPlan;
+import com.app.demo.persistence.repository.EmpresaRepository;
+import com.app.demo.persistence.repository.ImagenRepository;
+import com.app.demo.persistence.repository.PlanEmpresaRepository;
+import com.app.demo.persistence.repository.ValoracionPlanRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class PlanEmpresaService {
@@ -35,6 +40,9 @@ public class PlanEmpresaService {
 
     @Autowired
     private ValoracionPlanRepository valoracionRepository;
+    
+    @Autowired
+    private com.app.demo.persistence.repository.ClienteRepository clienteRepository;
 
     public PlanEmpresaResponse agregar(PlanEmpresaDTO dto, MultipartFile imagen) {
         try {
@@ -170,28 +178,52 @@ public class PlanEmpresaService {
     }
 
     @Transactional
-    public void agregarValoracion(Long planEmpresaId, Long clienteId, Integer puntuacion) {
+    public void agregarValoracion(Long planEmpresaId, Long clienteId, Integer puntuacion, String comentario) {
         PlanEmpresa plan = planEmpresaRepository.findById(planEmpresaId)
                 .orElseThrow(() -> new RuntimeException("Plan no encontrado"));
 
         // Buscar si el cliente ya ha valorado este plan
-        ValoracionPlan valoracionExistente = valoracionRepository.findByPlanEmpresaIdAndClienteId(planEmpresaId, clienteId);
+    ValoracionPlan valoracionExistente = valoracionRepository.findByPlanEmpresaIdAndCliente_IdCliente(planEmpresaId, clienteId);
 
         if (valoracionExistente != null) {
-            // Si ya existe una valoración, actualizamos la puntuación
+            // Si ya existe una valoración, actualizamos la puntuación y comentario
             valoracionExistente.setPuntuacion(puntuacion);
+            if (comentario != null) valoracionExistente.setComentario(comentario);
             valoracionRepository.save(valoracionExistente);
         } else {
             // Si no existe, creamos una nueva valoración
-            ValoracionPlan valoracion = new ValoracionPlan();
-            valoracion.setPlanEmpresa(plan);
-            valoracion.setClienteId(clienteId);
-            valoracion.setPuntuacion(puntuacion);
-            valoracionRepository.save(valoracion);
+        ValoracionPlan valoracion = new ValoracionPlan();
+        valoracion.setPlanEmpresa(plan);
+        // Asignar la entidad Cliente
+        com.app.demo.persistence.entity.Cliente cliente = clienteRepository.findById(clienteId)
+            .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        valoracion.setCliente(cliente);
+        valoracion.setPuntuacion(puntuacion);
+        valoracion.setComentario(comentario);
+        valoracionRepository.save(valoracion);
         }
 
         // Actualizar el promedio de valoraciones del plan
         actualizarValoracionPromedio(plan);
+    }
+
+    public ValoracionPlanResponse obtenerValoracionesPorPlan(Long planEmpresaId) {
+        try {
+            List<ValoracionPlan> valoraciones = valoracionRepository.findByPlanEmpresaId(planEmpresaId);
+            List<ValoracionPlanDTO> dtos = valoraciones.stream()
+                    .map(ValoracionPlanMapper::toDto)
+                    .collect(Collectors.toList());
+            return ValoracionPlanResponse.builder()
+                    .message("Valoraciones obtenidas exitosamente")
+                    .valid(true)
+                    .valoracionesList(dtos)
+                    .build();
+        } catch (Exception e) {
+            return ValoracionPlanResponse.builder()
+                    .message("Error: " + e.getMessage())
+                    .valid(false)
+                    .build();
+        }
     }
 
     private void actualizarValoracionPromedio(PlanEmpresa plan) {
