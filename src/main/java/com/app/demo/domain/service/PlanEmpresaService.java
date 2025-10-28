@@ -15,6 +15,7 @@ import com.app.demo.domain.mapper.PlanEmpresaMapper;
 import com.app.demo.domain.mapper.ValoracionPlanMapper;
 import com.app.demo.domain.response.PlanEmpresaResponse;
 import com.app.demo.domain.response.ValoracionPlanResponse;
+import com.app.demo.persistence.entity.Cliente;
 import com.app.demo.persistence.entity.Empresa;
 import com.app.demo.persistence.entity.Imagen;
 import com.app.demo.persistence.entity.PlanEmpresa;
@@ -182,26 +183,17 @@ public class PlanEmpresaService {
         PlanEmpresa plan = planEmpresaRepository.findById(planEmpresaId)
                 .orElseThrow(() -> new RuntimeException("Plan no encontrado"));
 
-        // Buscar si el cliente ya ha valorado este plan
-    ValoracionPlan valoracionExistente = valoracionRepository.findByPlanEmpresaIdAndCliente_IdCliente(planEmpresaId, clienteId);
-
-        if (valoracionExistente != null) {
-            // Si ya existe una valoración, actualizamos la puntuación y comentario
-            valoracionExistente.setPuntuacion(puntuacion);
-            if (comentario != null) valoracionExistente.setComentario(comentario);
-            valoracionRepository.save(valoracionExistente);
-        } else {
-            // Si no existe, creamos una nueva valoración
+        // Siempre crear una nueva valoración (permitir múltiples valoraciones del mismo cliente)
         ValoracionPlan valoracion = new ValoracionPlan();
         valoracion.setPlanEmpresa(plan);
+        
         // Asignar la entidad Cliente
-        com.app.demo.persistence.entity.Cliente cliente = clienteRepository.findById(clienteId)
+        Cliente cliente = clienteRepository.findById(clienteId)
             .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
         valoracion.setCliente(cliente);
         valoracion.setPuntuacion(puntuacion);
         valoracion.setComentario(comentario);
         valoracionRepository.save(valoracion);
-        }
 
         // Actualizar el promedio de valoraciones del plan
         actualizarValoracionPromedio(plan);
