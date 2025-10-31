@@ -11,4 +11,12 @@ import java.util.List;
 public interface PlanEmpresaRepository extends JpaRepository<PlanEmpresa, Long> {
 
     List<PlanEmpresa> findByEmpresa(Empresa empresa);
+
+    List<PlanEmpresa> findByDisponibleTrueAndDireccionContainingIgnoreCase(String ciudad);
+
+    List<PlanEmpresa> findByDisponibleTrueAndPaisIgnoreCase(String pais);
+
+    List<PlanEmpresa> findByDisponibleTrueAndEmpresa_CiudadIgnoreCase(String ciudad);
+
+    List<PlanEmpresa> findByDisponibleTrueAndEmpresa_CiudadContainingIgnoreCase(String ciudad);
 }
