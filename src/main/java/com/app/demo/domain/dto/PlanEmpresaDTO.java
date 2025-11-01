@@ -18,7 +18,7 @@ public class PlanEmpresaDTO {
     private String direccion;
     private String horario;
     private String email;
-    private String pais;
+    private String ciudad;
     private String telefono;
     private BigDecimal precio;
     private Integer cantidadDisponible;

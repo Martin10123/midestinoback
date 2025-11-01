@@ -26,7 +26,7 @@ public class CompraPlanDTO {
     private List<String> cantidadesCompradas;
     private List<String> horarios;
     private List<String> correos;
-    private List<String> paises;
+    private List<String> ciudades;
     private List<Long> telefonos;
     private List<String> imagenes;
     private List<BigDecimal> precios;

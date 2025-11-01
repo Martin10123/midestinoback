@@ -53,21 +53,18 @@ public class CompraPlanService {
             BigDecimal totalCompra = compraPlanDTO.getPrecios().stream()
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // Guardar la compra del plan
             CompraPlan compraPlan = CompraPlanMapper.toEntity(compraPlanDTO);
             compraPlan.setCliente(cliente);
             compraPlan.setPrecioTotalCompra(totalCompra);
             compraPlan.setFechaCompra(LocalDate.now().toString());
             CompraPlan compraPlanGuardado = compraPlanRepository.save(compraPlan);
 
-            // Restar el presupuesto al cliente
             cliente.setPresupuesto(cliente.getPresupuesto().subtract(totalCompra));
             clienteRepository.save(cliente);
 
-            Cliente admin = clienteRepository.findByEmail("admin@admin.com")
+            Cliente admin = clienteRepository.findByEmail("admin@midestino.com")
                     .orElseThrow(() -> new RuntimeException("Admin no encontrado"));
 
-            // Procesar cada plan empresa comprado
             List<Long> planEmpresasIds = compraPlanDTO.getPlanesPorEmpresa();
             List<String> cantidadesCompradas = compraPlanDTO.getCantidadesCompradas();
 
@@ -79,21 +76,17 @@ public class CompraPlanService {
                 if (planOpt.isPresent()) {
                     PlanEmpresa plan = planOpt.get();
 
-                    // Restar la cantidad comprada a la cantidad disponible
                     plan.setCantidadDisponible(plan.getCantidadDisponible() - cantidadComprada);
                     planEmpresaRepository.save(plan);
 
-                    // Calcular la ganancia y el 10% para el admin
                     Empresa empresa = plan.getEmpresa();
                     BigDecimal ganancia = plan.getPrecio().multiply(BigDecimal.valueOf(cantidadComprada));
                     BigDecimal adminComision = ganancia.multiply(BigDecimal.valueOf(0.10));
                     BigDecimal gananciaNetaEmpresa = ganancia.subtract(adminComision);
 
-                    // Asignar el 90% de la ganancia a la empresa
                     empresa.setGanancias(empresa.getGanancias().add(gananciaNetaEmpresa));
                     empresaRepository.save(empresa);
 
-                    // Sumar el 10% al presupuesto del admin
                     admin.setPresupuesto(admin.getPresupuesto().add(adminComision));
                     clienteRepository.save(admin);
                 } else {
@@ -105,7 +98,8 @@ public class CompraPlanService {
             eliminarDelCarritoCompras(cliente.getIdCliente());
 
             // Retornar la respuesta de la compra realizada
-            return new CompraPlanResponse("Compra plan guardada correctamente", true, CompraPlanMapper.toDTO(compraPlanGuardado), null);
+            return new CompraPlanResponse("Compra plan guardada correctamente", true,
+                    CompraPlanMapper.toDTO(compraPlanGuardado), null);
 
         } catch (Exception e) {
             System.out.println(e);

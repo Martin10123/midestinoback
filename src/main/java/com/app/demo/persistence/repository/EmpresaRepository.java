@@ -9,6 +9,8 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
 
     Optional<Empresa> findByCorreoAndContrasenaAndEmpresaFueAceptada(String email, String contrasena, boolean empresaFueAceptada);
 
+    Optional<Empresa> findByNombre(String nombre);
+
     boolean existsByNombre(String nombre);
 
     boolean existsByTelefono(String telefono);

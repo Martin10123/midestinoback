@@ -52,9 +52,9 @@ public class CompraPlan {
     private List<String> correos;
 
     @ElementCollection
-    @CollectionTable(name = "compra_plan_paises", joinColumns = @JoinColumn(name = "compra_plan_id"))
-    @Column(name = "pais")
-    private List<String> paises;
+    @CollectionTable(name = "compra_plan_ciudades", joinColumns = @JoinColumn(name = "compra_plan_id"))
+    @Column(name = "ciudad")
+    private List<String> ciudades;
 
     @ElementCollection
     @CollectionTable(name = "compra_plan_telefonos", joinColumns = @JoinColumn(name = "compra_plan_id"))

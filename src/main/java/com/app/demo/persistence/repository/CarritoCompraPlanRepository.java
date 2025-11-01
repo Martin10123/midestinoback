@@ -13,4 +13,5 @@ public interface CarritoCompraPlanRepository extends JpaRepository<CarritoCompra
 
     Optional<CarritoCompraPlan> findByClienteIdClienteAndPlanEmpresaId(Long clienteId, Long planEmpresaId);
 
+    boolean existsByClienteIdClienteAndPlanEmpresaIdAndEliminadoFalse(Long clienteId, Long planEmpresaId);
 }

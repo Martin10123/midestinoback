@@ -21,4 +21,5 @@ public class ChatRequestDTO {
     private Integer numeroPersonas;
     private Long clienteId;
     private String ciudadDestino;
+    private List<ChatMessageDTO> historialConversacion;
 }

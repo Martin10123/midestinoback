@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import com.app.demo.domain.dto.ChatMessageDTO;
 import com.app.demo.domain.dto.ChatRequestDTO;
 import com.app.demo.domain.dto.SuggestedPlanDTO;
 import com.app.demo.domain.response.ChatResponse;
@@ -29,7 +30,7 @@ import com.app.demo.persistence.repository.ValoracionPlanRepository;
 public class TravelChatService {
 
     private static final Locale CO_LOCALE = Locale.forLanguageTag("es-CO");
-    private static final String PAIS_POR_DEFECTO = "Colombia";
+    private static final String CIUDAD_POR_DEFECTO = "Cartagena";
 
     private final PlanEmpresaRepository planEmpresaRepository;
     private final ValoracionPlanRepository valoracionPlanRepository;
@@ -75,7 +76,12 @@ public class TravelChatService {
                     .map(this::mapToSuggestedPlan)
                     .toList();
 
-            String prompt = construirPrompt(request, presupuesto, planesSugeridos, ciudadDestino);
+            String prompt = construirPrompt(
+                    request,
+                    presupuesto,
+                    planesSugeridos,
+                    ciudadDestino,
+                    request.getHistorialConversacion());
 
             String respuestaModelo = googleGenerativeAiClient.generateText(prompt);
 
@@ -143,7 +149,7 @@ public class TravelChatService {
         }
 
         if (planes.isEmpty()) {
-            planes.addAll(planEmpresaRepository.findByDisponibleTrueAndPaisIgnoreCase(PAIS_POR_DEFECTO));
+            planes.addAll(planEmpresaRepository.findByDisponibleTrueAndCiudadIgnoreCase(CIUDAD_POR_DEFECTO));
         }
 
         Set<Long> ids = new HashSet<>();
@@ -195,13 +201,13 @@ public class TravelChatService {
                 .metodosPagoAceptados(plan.getMetodosPagoAceptados())
                 .informacionGeneral(plan.getInformacionGeneral())
                 .comentariosDestacados(comentarios)
-                .ciudad(plan.getEmpresa() != null ? plan.getEmpresa().getCiudad() : null)
-                .pais(plan.getPais())
+                .ciudad(plan.getCiudad())
+                .ciudadEmpresa(plan.getEmpresa() != null ? plan.getEmpresa().getCiudad() : null)
                 .build();
     }
 
     private String construirPrompt(ChatRequestDTO request, BigDecimal presupuesto, List<SuggestedPlanDTO> planes,
-            String ciudadDestino) {
+            String ciudadDestino, List<ChatMessageDTO> historialConversacion) {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append(
@@ -226,15 +232,30 @@ public class TravelChatService {
             prompt.append("- Intereses declarados: ").append(String.join(", ", request.getIntereses())).append('\n');
         }
 
+        if (!CollectionUtils.isEmpty(historialConversacion)) {
+            prompt.append('\n').append("HISTORIAL RECIENTE DEL CHAT:\n");
+            historialConversacion.stream()
+                    .limit(8)
+                    .forEach(mensaje -> prompt.append("-")
+                            .append(" ")
+                            .append(formatearRolConversacion(mensaje.getRol()))
+                            .append(": ")
+                            .append(defaultString(mensaje.getMensaje()))
+                            .append('\n'));
+        }
+
         prompt.append('\n').append("PLANES DISPONIBLES (información real de la base de datos):\n");
         for (int i = 0; i < planes.size(); i++) {
             SuggestedPlanDTO plan = planes.get(i);
             prompt.append(i + 1).append(". Nombre: ").append(defaultString(plan.getNombrePlan())).append('\n');
             prompt.append("   - Tipo: ").append(defaultString(plan.getTipoSitio())).append('\n');
             prompt.append("   - Dirección: ").append(defaultString(plan.getDireccion())).append('\n');
-            prompt.append("   - Ciudad / País: ")
-                    .append(defaultString(plan.getCiudad())).append(" / ")
-                    .append(defaultString(plan.getPais())).append('\n');
+            prompt.append("   - Ciudad del plan: ")
+                    .append(defaultString(plan.getCiudad())).append('\n');
+            if (StringUtils.hasText(plan.getCiudadEmpresa())) {
+                prompt.append("   - Ciudad de la empresa: ")
+                        .append(defaultString(plan.getCiudadEmpresa())).append('\n');
+            }
             prompt.append("   - Horario: ").append(defaultString(plan.getHorario())).append('\n');
             prompt.append("   - Precio por persona o plan: ")
                     .append(plan.getPrecio() != null ? formatearCop(plan.getPrecio()) : "No reportado").append('\n');
@@ -283,6 +304,18 @@ public class TravelChatService {
 
     private String defaultString(String value) {
         return StringUtils.hasText(value) ? value : "No disponible";
+    }
+
+    private String formatearRolConversacion(String rol) {
+        if (!StringUtils.hasText(rol)) {
+            return "Desconocido";
+        }
+
+        return switch (rol.toLowerCase()) {
+            case "user", "usuario", "cliente" -> "Usuario";
+            case "assistant", "bot", "asistente" -> "Asistente";
+            default -> Character.toUpperCase(rol.charAt(0)) + rol.substring(1).toLowerCase();
+        };
     }
 
     private String formatearCop(BigDecimal valor) {

@@ -34,8 +34,8 @@ public class PlanEmpresa {
     @Column(nullable = false, length = 100)
     private String email;
 
-    @Column(nullable = false, length = 50)
-    private String pais;
+    @Column(name = "ciudad", nullable = false, length = 50)
+    private String ciudad;
 
     @Column(nullable = false, length = 15)
     private String telefono;

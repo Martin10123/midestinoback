@@ -28,5 +28,5 @@ public class SuggestedPlanDTO {
     private String informacionGeneral;
     private List<String> comentariosDestacados;
     private String ciudad;
-    private String pais;
+    private String ciudadEmpresa;
 }
